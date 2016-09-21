@@ -20,19 +20,28 @@ class CreateInitialTables < ActiveRecord::Migration
       t.foreign_key :jurisdictions
     end
 	
-	add_index :standards, :jurisdiction_id
+    add_index :standards, :jurisdiction_id
     add_index :standards, :csp_id
 	
     create_table :parents do |t|
-	end
+    end
+ 
+    create_join_table :standards, :parents do |t|
+      t.index :standard_id
+      t.index :parent_id 
+      t.foreign_key :standards
+      t.foreign_key :parents
+    end
 
-	create_join_table :standards, :parents
+    create_table :education_levels do |t|
+      t.string :name
+    end
 	
-	create_table :education_levels do |t|
-		t.string :name
-	end
-	
-	create_join_table :standards, :education_levels
-	
+    create_join_table :standards, :education_levels do |t|
+      t.index :standard_id
+      t.index :education_level_id
+      t.foreign_key :standards
+      t.foreign_key :education_levels
+    end
   end
 end
