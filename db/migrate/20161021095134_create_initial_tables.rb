@@ -23,25 +23,24 @@ class CreateInitialTables < ActiveRecord::Migration
     add_index :standards, :jurisdiction_id
     add_index :standards, :csp_id
 	
-    create_table :parents do |t|
-    end
- 
-    create_join_table :standards, :parents do |t|
-      t.index :standard_id
-      t.index :parent_id 
+    create_table :standards_education_levels, {:id => false} do |t|
+      t.integer :standard_id
+      t.string :education_level
       t.foreign_key :standards
-      t.foreign_key :parents
     end
 
-    create_table :education_levels do |t|
-      t.string :name
+    add_index :standards_education_levels, :standard_id
+    execute "ALTER TABLE standards_education_levels ADD PRIMARY KEY (standard_id,education_level);"
+ 
+    create_table :standards_standards, {:id => false} do |t|
+      t.integer :parent_id
+      t.integer :child_id 
     end
-	
-    create_join_table :standards, :education_levels do |t|
-      t.index :standard_id
-      t.index :education_level_id
-      t.foreign_key :standards
-      t.foreign_key :education_levels
-    end
+    
+    add_index :standards_standards, :parent_id
+    add_index :standards_standards, :child_id
+    add_foreign_key :standards_standards, :standards, column: :parent_id, primary_key: "id"
+    add_foreign_key :standards_standards, :standards, column: :child_id, primary_key: "id"
+    execute "ALTER TABLE standards_standards ADD PRIMARY KEY (parent_id,child_id);"
   end
 end
