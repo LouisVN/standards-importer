@@ -11,41 +11,62 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150708101057) do
+ActiveRecord::Schema.define(version: 20161021101447) do
 
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "plpgsql"
+  create_table "education_levels", force: :cascade do |t|
+    t.string "name", limit: 255
+  end
+
+  create_table "education_levels_standards", id: false, force: :cascade do |t|
+    t.integer "standard_id",        limit: 4, null: false
+    t.integer "education_level_id", limit: 4, null: false
+  end
+
+  add_index "education_levels_standards", ["education_level_id"], name: "index_education_levels_standards_on_education_level_id", using: :btree
+  add_index "education_levels_standards", ["standard_id"], name: "index_education_levels_standards_on_standard_id", using: :btree
 
   create_table "jurisdictions", force: :cascade do |t|
-    t.string "csp_id"
-    t.json   "document"
-    t.string "title"
-    t.string "type"
+    t.string "csp_id",   limit: 255
+    t.string "document", limit: 255
+    t.string "title",    limit: 255
+    t.string "type",     limit: 255
   end
 
   add_index "jurisdictions", ["csp_id"], name: "index_jurisdictions_on_csp_id", using: :btree
 
+  create_table "parents", force: :cascade do |t|
+  end
+
+  create_table "parents_standards", id: false, force: :cascade do |t|
+    t.integer "standard_id", limit: 4, null: false
+    t.integer "parent_id",   limit: 4, null: false
+  end
+
+  add_index "parents_standards", ["parent_id"], name: "index_parents_standards_on_parent_id", using: :btree
+  add_index "parents_standards", ["standard_id"], name: "index_parents_standards_on_standard_id", using: :btree
+
   create_table "standards", force: :cascade do |t|
-    t.integer "jurisdiction_id",                  null: false
-    t.string  "csp_id"
-    t.integer "parent_ids",       default: [],    null: false, array: true
-    t.string  "education_levels", default: [],    null: false, array: true
-    t.string  "title"
-    t.string  "subject"
-    t.json    "document"
-    t.boolean "indexed",          default: false, null: false
-    t.integer "child_count",      default: 0
+    t.integer "jurisdiction_id", limit: 4,                   null: false
+    t.string  "csp_id",          limit: 255
+    t.string  "title",           limit: 255
+    t.string  "subject",         limit: 255
+    t.string  "document",        limit: 255
+    t.boolean "indexed",                     default: false, null: false
+    t.integer "child_count",     limit: 4,   default: 0
   end
 
   add_index "standards", ["csp_id"], name: "index_standards_on_csp_id", using: :btree
   add_index "standards", ["jurisdiction_id"], name: "index_standards_on_jurisdiction_id", using: :btree
-  add_index "standards", ["parent_ids"], name: "index_standards_on_parent_ids", using: :gin
 
   create_table "standards_schema_migrations", id: false, force: :cascade do |t|
-    t.string "version", null: false
+    t.string "version", limit: 255, null: false
   end
 
   add_index "standards_schema_migrations", ["version"], name: "unique_schema_migrations", unique: true, using: :btree
 
+  add_foreign_key "education_levels_standards", "education_levels"
+  add_foreign_key "education_levels_standards", "standards"
+  add_foreign_key "parents_standards", "parents"
+  add_foreign_key "parents_standards", "standards"
   add_foreign_key "standards", "jurisdictions"
 end
