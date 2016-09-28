@@ -13,34 +13,42 @@
 
 ActiveRecord::Schema.define(version: 20161021101447) do
 
-  create_table "jurisdictions", force: :cascade do |t|
+  create_table "EducationLevel", id: false, force: :cascade do |t|
+    t.integer "standard_id",     limit: 4,  default: 0,  null: false
+    t.string  "education_level", limit: 50, default: "", null: false
+  end
+
+  add_index "EducationLevel", ["standard_id"], name: "index_EducationLevel_on_standard_id", using: :btree
+
+  create_table "Jurisdiction", force: :cascade do |t|
     t.string "csp_id",   limit: 255
-    t.string "document", limit: 255
+    t.text   "document", limit: 65535
     t.string "title",    limit: 255
     t.string "type",     limit: 255
   end
 
-  add_index "jurisdictions", ["csp_id"], name: "index_jurisdictions_on_csp_id", using: :btree
+  add_index "Jurisdiction", ["csp_id"], name: "index_Jurisdiction_on_csp_id", using: :btree
 
-  create_table "standards", force: :cascade do |t|
-    t.integer "jurisdiction_id", limit: 4,                   null: false
+  create_table "Standard", force: :cascade do |t|
+    t.integer "jurisdiction_id", limit: 4,                     null: false
     t.string  "csp_id",          limit: 255
     t.string  "title",           limit: 255
     t.string  "subject",         limit: 255
-    t.string  "document",        limit: 255
-    t.boolean "indexed",                     default: false, null: false
-    t.integer "child_count",     limit: 4,   default: 0
+    t.text    "document",        limit: 65535
+    t.boolean "indexed",                       default: false, null: false
+    t.integer "child_count",     limit: 4,     default: 0
   end
 
-  add_index "standards", ["csp_id"], name: "index_standards_on_csp_id", using: :btree
-  add_index "standards", ["jurisdiction_id"], name: "index_standards_on_jurisdiction_id", using: :btree
+  add_index "Standard", ["csp_id"], name: "index_Standard_on_csp_id", using: :btree
+  add_index "Standard", ["jurisdiction_id"], name: "index_Standard_on_jurisdiction_id", using: :btree
 
-  create_table "standards_education_levels", id: false, force: :cascade do |t|
-    t.integer "standard_id",     limit: 4,   default: 0,  null: false
-    t.string  "education_level", limit: 255, default: "", null: false
+  create_table "Standard_Standard", id: false, force: :cascade do |t|
+    t.integer "parent_id", limit: 4, default: 0, null: false
+    t.integer "child_id",  limit: 4, default: 0, null: false
   end
 
-  add_index "standards_education_levels", ["standard_id"], name: "index_standards_education_levels_on_standard_id", using: :btree
+  add_index "Standard_Standard", ["child_id"], name: "index_Standard_Standard_on_child_id", using: :btree
+  add_index "Standard_Standard", ["parent_id"], name: "index_Standard_Standard_on_parent_id", using: :btree
 
   create_table "standards_schema_migrations", id: false, force: :cascade do |t|
     t.string "version", limit: 255, null: false
@@ -48,16 +56,8 @@ ActiveRecord::Schema.define(version: 20161021101447) do
 
   add_index "standards_schema_migrations", ["version"], name: "unique_schema_migrations", unique: true, using: :btree
 
-  create_table "standards_standards", id: false, force: :cascade do |t|
-    t.integer "parent_id", limit: 4, default: 0, null: false
-    t.integer "child_id",  limit: 4, default: 0, null: false
-  end
-
-  add_index "standards_standards", ["child_id"], name: "index_standards_standards_on_child_id", using: :btree
-  add_index "standards_standards", ["parent_id"], name: "index_standards_standards_on_parent_id", using: :btree
-
-  add_foreign_key "standards", "jurisdictions"
-  add_foreign_key "standards_education_levels", "standards"
-  add_foreign_key "standards_standards", "standards", column: "child_id"
-  add_foreign_key "standards_standards", "standards", column: "parent_id"
+  add_foreign_key "EducationLevel", "Standard", column: "standard_id"
+  add_foreign_key "Standard", "Jurisdiction", column: "jurisdiction_id"
+  add_foreign_key "Standard_Standard", "Standard", column: "child_id"
+  add_foreign_key "Standard_Standard", "Standard", column: "parent_id"
 end
