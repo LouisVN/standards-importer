@@ -1,5 +1,7 @@
 # standards-importer
 
+Forked to operate against MySQL DB (v5.5 and later) through 'mysql2', '~> 0.3.13' adapter (cf. Gemfile)
+
 Usage:
 
 * clone repo
