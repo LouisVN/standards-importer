@@ -2,12 +2,21 @@ require 'active_record'
 require 'logger'
 
 class Jurisdiction < ActiveRecord::Base
+  self.table_name = "Jurisdiction"
   self.inheritance_column = :_type_disabled
-  has_many :standards
+  has_many :Standard
 end
 
 class Standard < ActiveRecord::Base
-  belongs_to :jurisdiction
+  self.table_name = "Standard"
+end
+
+class Standard_Standard < ActiveRecord::Base
+  self.table_name = "Standard_Standard"
+end
+
+class EducationLevel < ActiveRecord::Base
+  self.table_name = "EducationLevel"
 end
 
 class CommonStandardsImport
@@ -34,8 +43,9 @@ class CommonStandardsImport
 
   def self.count_children
     ensure_setup
-    @tbl = Standard.table_name
-    Standard.connection.execute("update #{@tbl} as st set child_count = cc.child_count from (select id, (select count(*) from #{@tbl} sc where sp.id = ANY(sc.parent_ids)) child_count from #{@tbl} sp) as cc where st.id = cc.id;")
+    @StandardTBL = Standard.table_name
+	@ChildrenTBL = Standard_Standard.table_name
+	ActiveRecord::Base.connection.execute("UPDATE #{@StandardTBL} as st SET st.child_count = (SELECT COUNT(*) FROM #{@ChildrenTBL} as ch WHERE ch.parent_id = st.id)")	
   end
 
   def import_jurisdictions(file)
@@ -63,30 +73,39 @@ class CommonStandardsImport
       end
       #create root standard
       root = Standard.create(
-        jurisdiction: jurisdiction,
+        jurisdiction_id: jurisdiction.id,
         csp_id: set["id"],
-        education_levels: ed_levels,
         title: set["title"],
         subject: subject,
         document: set
       )
-
+	  
+	  create_education_level(root, ed_levels)
+ 
       sorted_standards = child_standards.values.sort {|x,y| x["depth"] <=> y["depth"]}
 
       sorted_standards.each do |standard|
-        most_parents = Standard.where(csp_id: standard["ancestorIds"]).sort {|x,y| x.parent_ids.length <=> y.parent_ids.length}
+        most_parents = Standard.where(csp_id: standard["ancestorIds"])
         parent_ids = [root.id] + most_parents.map(&:id)
         if parent_ids.length < standard["ancestorIds"].length + 1
           raise "parent not found"
         else
-          create_from_json(standard, jurisdiction, ed_levels, subject, parent_ids)
+          create_children_standards(standard, jurisdiction, ed_levels, subject, parent_ids)
         end
       end
     end
   end
+  
+  def create_education_level(standard, ed_levels)
+	ed_levels.each do |education_level|
+      EducationLevel.create(
+        standard_id: standard.id,
+        education_level: education_level
+      )
+	end
+  end
 
-  def create_from_json(standard, jurisdiction, ed_levels, subject, parent_ids)
-
+  def create_children_standards(standard, jurisdiction, ed_levels, subject, parent_ids)
     indexed = true
     if standard["statementLevel"]
       indexed = standard["statementLevel"] == "Standard"
@@ -94,15 +113,22 @@ class CommonStandardsImport
       indexed = false
     end
 
-    Standard.create(
-      jurisdiction: jurisdiction,
-      csp_id: standard["id"],
-      education_levels: ed_levels,
-      subject: subject,
-      document: standard,
-      parent_ids: parent_ids,
-      indexed: indexed
-    )
+	parent_ids.each do |parent_id|
+      child = Standard.create(
+        jurisdiction_id: jurisdiction.id,
+        csp_id: standard["id"],
+        subject: subject,
+        document: standard,
+        indexed: indexed
+      )
+	  
+	  create_education_level(child, ed_levels)
+
+	  Standard_Standard.create(
+        parent_id: parent_id,
+        child_id: child.id
+      )
+	end
   end
 
 end
