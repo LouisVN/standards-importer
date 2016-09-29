@@ -1,5 +1,6 @@
 require_relative 'common_standards_download'
 require_relative 'common_standards_import'
+require_relative 'common_standards_whitelist'
 require 'standalone_migrations'
 
 ActiveRecord::SchemaMigration.class_eval do
@@ -16,8 +17,13 @@ desc ""
 task :import, [:limit] => :fetch do
   puts 'import'
   ENV["ENV"] ||= "development"
-  CommonStandardsImport.run('jurisdictions.json', 'standard_sets.json', true)
+  CommonStandardsImport.run('jurisdictions.json', 'standard_sets.json', 'jurisdictions_whitelist.csv', true)
   CommonStandardsImport.count_children
+end
+
+task :whitelist do 
+  jurisdictions_array= CommonStandardsWhitelist.parse('jurisdictions_whitelist.csv')
+  jurisdictions_array.each { |x| puts x }
 end
 
 task :count do

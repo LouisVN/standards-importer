@@ -1,5 +1,6 @@
 require 'active_record'
 require 'logger'
+require_relative 'common_standards_whitelist'
 
 class Jurisdiction < ActiveRecord::Base
   self.table_name = "Jurisdiction"
@@ -21,10 +22,10 @@ end
 
 class CommonStandardsImport
 
-  def self.run(jurisdictions_file, standards_file, wipe_existing=false)
+  def self.run(jurisdictions_file, standards_file, whitelist_file, wipe_existing=false)
     ensure_setup
     importer = self.new
-    importer.import_jurisdictions(jurisdictions_file)
+    importer.import_jurisdictions(jurisdictions_file, whitelist_file)
     importer.import_standards(standards_file)
   end
 
@@ -44,19 +45,22 @@ class CommonStandardsImport
   def self.count_children
     ensure_setup
     @StandardTBL = Standard.table_name
-	@ChildrenTBL = Standard_Standard.table_name
-	ActiveRecord::Base.connection.execute("UPDATE #{@StandardTBL} as st SET st.child_count = (SELECT COUNT(*) FROM #{@ChildrenTBL} as ch WHERE ch.parent_id = st.id)")	
+    @ChildrenTBL = Standard_Standard.table_name
+    ActiveRecord::Base.connection.execute("UPDATE #{@StandardTBL} as st SET st.child_count = (SELECT COUNT(*) FROM #{@ChildrenTBL} as ch WHERE ch.parent_id = st.id)")	
   end
 
-  def import_jurisdictions(file)
+  def import_jurisdictions(file, whitelist_file)
     jurisdictions = JSON.parse(File.read(file))
-    jurisdictions.each do |jur|
-      Jurisdiction.create(
-        title: jur["title"],
-        csp_id: jur["id"],
-        type: jur["type"],
-        document: jur
-      )
+    whitelist = CommonStandardsWhitelist.parse(whitelist_file)
+    jurisdictions.each do |jur| 
+      if whitelist.any? { |jurisdiction| jurisdiction.include? jur['title'] }
+        Jurisdiction.create(
+          title: jur["title"],
+          csp_id: jur["id"],
+          type: jur["type"],
+          document: jur
+        )
+      end
     end
   end
 
@@ -69,7 +73,7 @@ class CommonStandardsImport
       child_standards = set.delete("standards")
       jurisdiction = Jurisdiction.where(csp_id: set["jurisdiction"]["id"]).first
       unless jurisdiction
-        raise "Jurisdiction not found for #{set["id"]} #{set["title"]}"
+        next
       end
       #create root standard
       root = Standard.create(
@@ -80,7 +84,7 @@ class CommonStandardsImport
         document: set
       )
 	  
-	  create_education_level(root, ed_levels)
+      create_education_level(root, ed_levels)
  
       sorted_standards = child_standards.values.sort {|x,y| x["depth"] <=> y["depth"]}
 
@@ -97,12 +101,12 @@ class CommonStandardsImport
   end
   
   def create_education_level(standard, ed_levels)
-	ed_levels.each do |education_level|
+    ed_levels.each do |education_level|
       EducationLevel.create(
         standard_id: standard.id,
         education_level: education_level
       )
-	end
+    end
   end
 
   def create_children_standards(standard, jurisdiction, ed_levels, subject, parent_ids)
@@ -113,7 +117,7 @@ class CommonStandardsImport
       indexed = false
     end
 
-	parent_ids.each do |parent_id|
+    parent_ids.each do |parent_id|
       child = Standard.create(
         jurisdiction_id: jurisdiction.id,
         csp_id: standard["id"],
@@ -122,13 +126,12 @@ class CommonStandardsImport
         indexed: indexed
       )
 	  
-	  create_education_level(child, ed_levels)
+      create_education_level(child, ed_levels)
 
-	  Standard_Standard.create(
+      Standard_Standard.create(
         parent_id: parent_id,
         child_id: child.id
       )
-	end
+    end
   end
-
 end
