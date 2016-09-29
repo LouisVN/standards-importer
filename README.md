@@ -2,6 +2,8 @@
 
 Forked to operate against MySQL DB (v5.5 and later) through 'mysql2', '~> 0.3.13' adapter (cf. Gemfile)
 
+Only import Jurisdictions and related Standard sets specified in the 'jurisdictions_whitelist.csv'
+
 Usage:
 
 * clone repo
