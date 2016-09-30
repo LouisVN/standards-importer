@@ -1,7 +1,7 @@
 class CreateInitialTables < ActiveRecord::Migration
   def change
     create_table :Jurisdiction do |t|
-      t.column :csp_id, :string
+      t.column :csp_id, :string, :limit => 100
       t.column :document, :text
       t.string :title
       t.string :type
@@ -11,7 +11,7 @@ class CreateInitialTables < ActiveRecord::Migration
 
     create_table :Standard do |t|
       t.column :jurisdiction_id, :integer, null: false
-      t.column :csp_id, :string
+      t.column :csp_id, :string, :limit => 100
       t.string :title
       t.string :subject
       t.column :document, :text

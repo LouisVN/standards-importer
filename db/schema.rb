@@ -21,7 +21,7 @@ ActiveRecord::Schema.define(version: 20161021101447) do
   add_index "EducationLevel", ["standard_id"], name: "index_EducationLevel_on_standard_id", using: :btree
 
   create_table "Jurisdiction", force: :cascade do |t|
-    t.string "csp_id",   limit: 255
+    t.string "csp_id",   limit: 100
     t.text   "document", limit: 65535
     t.string "title",    limit: 255
     t.string "type",     limit: 255
@@ -31,7 +31,7 @@ ActiveRecord::Schema.define(version: 20161021101447) do
 
   create_table "Standard", force: :cascade do |t|
     t.integer "jurisdiction_id", limit: 4,                     null: false
-    t.string  "csp_id",          limit: 255
+    t.string  "csp_id",          limit: 100
     t.string  "title",           limit: 255
     t.string  "subject",         limit: 255
     t.text    "document",        limit: 65535
