@@ -7,7 +7,7 @@ class CreateInitialTables < ActiveRecord::Migration
       t.string :type
     end
 
-    add_index :Jurisdiction, :csp_id
+    add_index :Jurisdiction, :csp_id, :unique => true
 
     create_table :Standard do |t|
       t.column :jurisdiction_id, :integer, null: false
@@ -21,7 +21,7 @@ class CreateInitialTables < ActiveRecord::Migration
     end
 	
     add_index :Standard, :jurisdiction_id
-    add_index :Standard, :csp_id
+    add_index :Standard, :csp_id, :unique => true
 	
     create_table :EducationLevel, {:id => false} do |t|
       t.integer :standard_id

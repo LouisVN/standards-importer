@@ -54,12 +54,24 @@ class CommonStandardsImport
     whitelist = CommonStandardsWhitelist.parse(whitelist_file)
     jurisdictions.each do |jur| 
       if whitelist.any? { |jurisdiction| jurisdiction.include? jur['title'] }
-        Jurisdiction.create(
-          title: jur["title"],
-          csp_id: jur["id"],
-          type: jur["type"],
-          document: jur
-        )
+	    begin
+          Jurisdiction.create(
+            title: jur["title"],
+            csp_id: jur["id"],
+            type: jur["type"],
+            document: jur
+          )
+		rescue ActiveRecord::RecordNotUnique => e
+		  #update entry if needed
+		  old_jurisdiction = Jurisdiction.where(csp_id: jur["id"]).first
+          Jurisdiction.update(
+		    old_jurisdiction.id,
+            :title => jur["title"],
+            :csp_id => jur["id"],
+            :type => jur["type"],
+            :document => jur
+          )		
+		end
       end
     end
   end
@@ -73,19 +85,38 @@ class CommonStandardsImport
       child_standards = set.delete("standards")
       jurisdiction = Jurisdiction.where(csp_id: set["jurisdiction"]["id"]).first
       unless jurisdiction
+        #raise "Jurisdiction not found for #{set["id"]} #{set["title"]}"
         next
       end
-      #create root standard
-      root = Standard.create(
-        jurisdiction_id: jurisdiction.id,
-        csp_id: set["id"],
-        title: set["title"],
-        subject: subject,
-        document: set
-      )
 	  
-      create_education_level(root, ed_levels)
- 
+	  begin
+        #create root standard
+        root = Standard.create(
+          jurisdiction_id: jurisdiction.id,
+          csp_id: set["id"],
+          title: set["title"],
+          subject: subject,
+          document: set
+        )
+		
+		create_education_level(root, ed_levels)
+	  rescue ActiveRecord::RecordNotUnique => e
+		#update entry if needed
+	    old_standard = Standard.where(csp_id: set["id"]).first
+	    root = Standard.update(
+          old_standard.id,
+          :csp_id => set["id"],
+          :title => set["title"],
+          :subject => subject,
+          :document => set
+        )
+		
+		#delete and recreate related concepts
+		@id = root.id
+	    EducationLevel.delete_all "standard_id = #{@id}"
+	    create_education_level(root, ed_levels)
+	  end
+	
       sorted_standards = child_standards.values.sort {|x,y| x["depth"] <=> y["depth"]}
 
       sorted_standards.each do |standard|
@@ -99,6 +130,47 @@ class CommonStandardsImport
       end
     end
   end
+
+  def create_children_standards(standard, jurisdiction, ed_levels, subject, parent_ids)
+    indexed = true
+    if standard["statementLevel"]
+      indexed = standard["statementLevel"] == "Standard"
+    elsif standard["depth"] == 0
+      indexed = false
+    end
+	
+	begin 
+	  #create child standard and related concepts
+	  child = Standard.create(
+		jurisdiction_id: jurisdiction.id,
+		csp_id: standard["id"],
+		subject: subject,
+		document: standard,
+		indexed: indexed
+	  )
+	  
+	  create_education_level(child, ed_levels)
+	  create_parent_standards(child, parent_ids)
+
+    rescue ActiveRecord::RecordNotUnique => e
+	  #update entry if needed
+	  old_standard = Standard.where(csp_id: standard["id"]).first
+	  child = Standard.update(
+        old_standard.id,
+        :csp_id => standard["id"],
+        :subject => subject,
+        :document => standard,
+        :indexed => indexed
+      )
+	  #delete and recreate related concepts
+	  @id = old_standard.id
+	  EducationLevel.delete_all "standard_id = #{@id}"
+	  create_education_level(child, ed_levels)
+
+	  Standard_Standard.delete_all "child_id = #{@id}"
+	  create_parent_standards(child, parent_ids)
+	end	
+  end
   
   def create_education_level(standard, ed_levels)
     ed_levels.each do |education_level|
@@ -108,30 +180,13 @@ class CommonStandardsImport
       )
     end
   end
-
-  def create_children_standards(standard, jurisdiction, ed_levels, subject, parent_ids)
-    indexed = true
-    if standard["statementLevel"]
-      indexed = standard["statementLevel"] == "Standard"
-    elsif standard["depth"] == 0
-      indexed = false
-    end
-
-    parent_ids.each do |parent_id|
-      child = Standard.create(
-        jurisdiction_id: jurisdiction.id,
-        csp_id: standard["id"],
-        subject: subject,
-        document: standard,
-        indexed: indexed
-      )
-	  
-      create_education_level(child, ed_levels)
-
+  
+  def create_parent_standards(standard, parent_ids)
+	parent_ids.each do |parent_id|
       Standard_Standard.create(
         parent_id: parent_id,
-        child_id: child.id
+        child_id: standard.id
       )
-    end
-  end
+    end 
+  end 
 end
