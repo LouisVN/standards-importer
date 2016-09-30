@@ -27,7 +27,7 @@ ActiveRecord::Schema.define(version: 20161021101447) do
     t.string "type",     limit: 255
   end
 
-  add_index "Jurisdiction", ["csp_id"], name: "index_Jurisdiction_on_csp_id", using: :btree
+  add_index "Jurisdiction", ["csp_id"], name: "index_Jurisdiction_on_csp_id", unique: true, using: :btree
 
   create_table "Standard", force: :cascade do |t|
     t.integer "jurisdiction_id", limit: 4,                     null: false
@@ -39,7 +39,7 @@ ActiveRecord::Schema.define(version: 20161021101447) do
     t.integer "child_count",     limit: 4,     default: 0
   end
 
-  add_index "Standard", ["csp_id"], name: "index_Standard_on_csp_id", using: :btree
+  add_index "Standard", ["csp_id"], name: "index_Standard_on_csp_id", unique: true, using: :btree
   add_index "Standard", ["jurisdiction_id"], name: "index_Standard_on_jurisdiction_id", using: :btree
 
   create_table "Standard_Standard", id: false, force: :cascade do |t|
