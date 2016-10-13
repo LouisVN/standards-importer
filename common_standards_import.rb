@@ -59,7 +59,7 @@ class CommonStandardsImport
             title: jur["title"],
             csp_id: jur["id"],
             type: jur["type"],
-            document: jur
+            document: JSON.generate(jur)
           )
 		rescue ActiveRecord::RecordNotUnique => e
 		  #update entry if needed
@@ -69,7 +69,7 @@ class CommonStandardsImport
             :title => jur["title"],
             :csp_id => jur["id"],
             :type => jur["type"],
-            :document => jur
+            :document => JSON.generate(jur)
           )		
 		end
       end
@@ -96,7 +96,7 @@ class CommonStandardsImport
           csp_id: set["id"],
           title: set["title"],
           subject: subject,
-          document: set
+          document: JSON.generate(set)
         )
 		
 		create_education_level(root, ed_levels)
@@ -108,7 +108,7 @@ class CommonStandardsImport
           :csp_id => set["id"],
           :title => set["title"],
           :subject => subject,
-          :document => set
+          :document => JSON.generate(set)
         )
 		
 		#delete and recreate related concepts
@@ -145,7 +145,7 @@ class CommonStandardsImport
 		jurisdiction_id: jurisdiction.id,
 		csp_id: standard["id"],
 		subject: subject,
-		document: standard,
+		document: JSON.generate(standard),
 		indexed: indexed
 	  )
 	  
@@ -159,7 +159,7 @@ class CommonStandardsImport
         old_standard.id,
         :csp_id => standard["id"],
         :subject => subject,
-        :document => standard,
+        :document => JSON.generate(standard),
         :indexed => indexed
       )
 	  #delete and recreate related concepts
